@@ -4,7 +4,7 @@ from alphafold.model.multi_head_attention import MultiHeadAttention
 
 class MSARowAttentionWithPairBias(torch.nn.Module):
     """
-    Implementation of Algorithm 7.
+    Implementation of the Algorithm 7.
     """
 
     def __init__(self, c_m: int, c_z: int, c=32, N_head=8):
@@ -47,3 +47,38 @@ class MSARowAttentionWithPairBias(torch.nn.Module):
         b = b.movedim(-1, -3)
 
         return self.mha(m, bias=b)
+
+
+class MSAColumnAttention(torch.nn.Module):
+    """
+    Implementation of the Algorithm 8.
+    """
+
+    def __init__(self, c_m: int, c: int, N_head: int = 8):
+        """
+        Initializes MSAColumnAttention.
+
+        Args:
+            c_m:    Embedding dimensions of the MSA representation.
+            c:  Embedding dimension for multi-head attention.
+            N_head: Number of heads for multi-head attention
+        """
+        super().__init__()
+
+        self.layer_norm_m = torch.nn.LayerNorm(c_m)
+        self.mha = MultiHeadAttention(c_m, c, N_head, attn_dim=-3, gated=True)
+
+    def forward(self, m: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the Algorithm 8.
+
+        Args:
+            m:  A PyTorch tensor of shape (*, N_seq, N_res, c_m) that contains
+                the MSA representation.
+
+        Returns:
+            Output PyTorch tensor with the shape of m
+        """
+
+        m = self.layer_norm_m(m)
+        return self.mha(m)
