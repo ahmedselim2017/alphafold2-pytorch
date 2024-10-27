@@ -15,3 +15,18 @@ def test_trianglemultiplication():
 
     test_module(tri_mul_in, 'tri_mul_in', 'z', 'z_out', control_folder)
     test_module(tri_mul_out, 'tri_mul_out', 'z', 'z_out', control_folder)
+
+
+def test_TriangleAttention():
+    from alphafold.model.pair_stack import TriangleAttention
+    from tests.control_values.evoformer.evoformer_checks import c_z, c, N_head
+    from tests.control_values.evoformer.evoformer_checks import test_module_shape, test_module
+
+    tri_att_start = TriangleAttention(c_z, 'starting_node', c, N_head)
+    tri_att_end = TriangleAttention(c_z, 'ending_node', c, N_head)
+
+    test_module_shape(tri_att_start, 'tri_att_start', control_folder)
+    test_module_shape(tri_att_end, 'tri_att_end', control_folder)
+
+    test_module(tri_att_start, 'tri_att_start', 'z', 'z_out', control_folder)
+    test_module(tri_att_end, 'tri_att_end', 'z', 'z_out', control_folder)
