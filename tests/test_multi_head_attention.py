@@ -1,9 +1,9 @@
-control_folder = "./control_values"
+control_folder = "./control_values/mha"
 
 
 def test_init():
-    from tests.control_values.attention_checks import c_in, c, N_head, attn_dim
-    from tests.control_values.attention_checks import test_module_shape
+    from tests.control_values.mha.attention_checks import c_in, c, N_head, attn_dim
+    from tests.control_values.mha.attention_checks import test_module_shape
 
     from alphafold.model.multi_head_attention import MultiHeadAttention
 
@@ -21,8 +21,8 @@ def test_init():
 
 def test_prepare_qkv():
     from alphafold.model.multi_head_attention import MultiHeadAttention
-    from tests.control_values.attention_checks import c_in, c, N_head, attn_dim
-    from tests.control_values.attention_checks import test_module_method
+    from tests.control_values.mha.attention_checks import c_in, c, N_head, attn_dim
+    from tests.control_values.mha.attention_checks import test_module_method
 
     mha = MultiHeadAttention(c_in, c, N_head, attn_dim=attn_dim, gated=True)
 
@@ -33,8 +33,8 @@ def test_prepare_qkv():
 
 def test_forward():
     from alphafold.model.multi_head_attention import MultiHeadAttention
-    from tests.control_values.attention_checks import c_in, c, N_head, attn_dim
-    from tests.control_values.attention_checks import test_module_forward
+    from tests.control_values.mha.attention_checks import c_in, c, N_head, attn_dim
+    from tests.control_values.mha.attention_checks import test_module_forward
 
     mha_ungated = MultiHeadAttention(c_in,
                                      c,
@@ -58,10 +58,10 @@ def test_forward():
 
 def test_forward_global():
     from alphafold.model.multi_head_attention import MultiHeadAttention
-    from tests.control_values.attention_checks import c_in, c, N_head, attn_dim
-    from tests.control_values.attention_checks import test_module_forward
-    from tests.control_values.attention_checks import test_module_shape
-    from tests.control_values.attention_checks import test_module_method
+    from tests.control_values.mha.attention_checks import c_in, c, N_head, attn_dim
+    from tests.control_values.mha.attention_checks import test_module_forward
+    from tests.control_values.mha.attention_checks import test_module_shape
+    from tests.control_values.mha.attention_checks import test_module_method
 
     mha_global = MultiHeadAttention(c_in,
                                     c,
