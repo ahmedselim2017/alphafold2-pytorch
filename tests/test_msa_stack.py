@@ -36,3 +36,14 @@ def test_MSATransition():
     test_module_shape(msa_trans, 'msa_transition', control_folder)
 
     test_module(msa_trans, 'msa_transition', 'm', 'out', control_folder)
+
+
+def test_outerproductmean():
+    from alphafold.model.msa_stack import OuterProductMean
+    from tests.control_values.evoformer.evoformer_checks import c_m, c_z, c
+    from tests.control_values.evoformer.evoformer_checks import test_module_shape, test_module
+
+    opm = OuterProductMean(c_m, c_z, c)
+    test_module_shape(opm, 'outer_product_mean', control_folder)
+
+    test_module(opm, 'outer_product_mean', 'm', 'z_out', control_folder)

@@ -124,3 +124,67 @@ class MSATransition(torch.nn.Module):
         a = self.linear_1(m)
         m = self.linear_2(self.relu(a))
         return m
+
+
+class OuterProductMean(torch.nn.Module):
+    """
+    Implementation of the Algorithm 10.
+    """
+
+    def __init__(self, c_m: int, c_z: int, c: int = 32):
+        """
+        Initializes OuterProductMean.
+
+        Args:
+            c_m:    Embedding dimensions of the MSA representation.
+            c_z:    Embedding dimensions of the pair representation.
+            c:  Embedding dimension for a and b.
+        """
+
+        super().__init__()
+
+        self.layer_norm = torch.nn.LayerNorm(c_m)
+        self.linear_1 = torch.nn.Linear(c_m, c)
+        self.linear_2 = torch.nn.Linear(c_m, c)
+        self.linear_out = torch.nn.Linear(c * c, c_z)
+
+        return
+
+    def forward(self, m: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the Algorithm 10.
+
+        The Supplementary Information of AlphaFold2 paper calculates mean
+        before flattening whereas the DeepMind's AlphaFold2 implementation
+        calculates sums, then flattens and finally divides the output tensor
+        to the N_seq. The Algorithm 10 is implemented in the same way as the
+        DeepMind's AlphaFold2 implementation.
+
+        Args:
+            m:  A PyTorch tensor of shape (*, N_seq, N_res, c_m) that contains
+                the MSA representation.
+
+        Returns:
+            Output PyTorch tensor with the shape of (*, N_res, N_res, c_z)
+        """
+
+        N_seq = m.shape[-3]
+
+        m = self.layer_norm(m)
+
+        # (*, N_seq, N_res, c_m) -> (*, N_seq, N_res, c)
+        a = self.linear_1(m)
+
+        # (*, N_seq, N_res, c_m) -> (*, N_seq, N_res, c)
+        b = self.linear_2(m)
+
+        # (*, N_res, N_res, c, c)
+        o = torch.einsum("...sic,...sjk->...ijck", a, b)
+
+        # (*, N_res, N_res, c, c) -> (*, N_res, N_res, c**2)
+        o = torch.flatten(o, start_dim=-2)
+
+        # (*, N_res, N_res, c**2) -> (*, N_res, N_res, c_z)
+        z = self.linear_out(o) / N_seq
+
+        return z
