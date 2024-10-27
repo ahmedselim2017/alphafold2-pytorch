@@ -30,3 +30,16 @@ def test_TriangleAttention():
 
     test_module(tri_att_start, 'tri_att_start', 'z', 'z_out', control_folder)
     test_module(tri_att_end, 'tri_att_end', 'z', 'z_out', control_folder)
+
+
+def test_PairTransition():
+    from alphafold.model.pair_stack import PairTransition
+    from tests.control_values.evoformer.evoformer_checks import c_z
+    from tests.control_values.evoformer.evoformer_checks import test_module_shape, test_module
+
+    n = 3
+    pair_trans = PairTransition(c_z, n)
+
+    test_module_shape(pair_trans, 'pair_transition', control_folder)
+
+    test_module(pair_trans, 'pair_transition', 'z', 'z_out', control_folder)

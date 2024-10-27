@@ -127,3 +127,46 @@ class TriangleAttention(torch.nn.Module):
             b = b.transpose(-1, -2)
 
         return self.mha(z, bias=b)
+
+
+class PairTransition(torch.nn.Module):
+    """
+    Implementation of the Algorithm 15.
+    """
+
+    def __init__(self, c_z: int, n: int = 4):
+        """
+        Initializes  PairTransition.
+
+        Args:
+            c_z:    Embedding dimensions of the pair representation.
+            n:  The factor that should be while expanding the original
+                number of channels.
+        """
+
+        super().__init__()
+
+        c_inter = c_z * n
+
+        self.layer_norm = torch.nn.LayerNorm(c_z)
+        self.linear_1 = torch.nn.Linear(c_z, c_inter)
+        self.relu = torch.nn.ReLU()
+        self.linear_2 = torch.nn.Linear(c_inter, c_z)
+
+    def forward(self, z: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the Algorithm 15.
+
+        Args:
+            z:  A PyTorch tensor of shape (*, N_res, N_res, c_m) that contains
+                the MSA representation.
+
+        Returns:
+            Output PyTorch tensor with the shape of z
+        """
+
+        z = self.layer_norm(z)
+        a = self.linear_1(z)
+        z = self.linear_2(self.relu(a))
+
+        return z
