@@ -23,3 +23,16 @@ def test_MSAColumnAttention():
     test_module_shape(msa_col_att, 'msa_col_att', control_folder)
 
     test_module(msa_col_att, 'msa_col_att', 'm', 'out', control_folder)
+
+
+def test_MSATransition():
+    from alphafold.model.msa_stack import MSATransition
+    from tests.control_values.evoformer.evoformer_checks import c_m
+    from tests.control_values.evoformer.evoformer_checks import test_module_shape, test_module
+
+    n = 3
+    msa_trans = MSATransition(c_m, n)
+
+    test_module_shape(msa_trans, 'msa_transition', control_folder)
+
+    test_module(msa_trans, 'msa_transition', 'm', 'out', control_folder)

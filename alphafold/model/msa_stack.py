@@ -82,3 +82,45 @@ class MSAColumnAttention(torch.nn.Module):
 
         m = self.layer_norm_m(m)
         return self.mha(m)
+
+
+class MSATransition(torch.nn.Module):
+    """
+    Implementation of the Algorithm 9.
+    """
+
+    def __init__(self, c_m: int, n: int = 4):
+        """
+        Initializes  MSATransition.
+
+        Args:
+            c_m:    Embedding dimensions of the MSA representation.
+            n:  The factor that should be while expanding the original
+                number of channels.
+        """
+
+        super().__init__()
+
+        c_inter = c_m * n
+
+        self.layer_norm = torch.nn.LayerNorm(c_m)
+        self.linear_1 = torch.nn.Linear(c_m, c_inter)
+        self.relu = torch.nn.ReLU()
+        self.linear_2 = torch.nn.Linear(c_inter, c_m)
+
+    def forward(self, m: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the Algorithm 9.
+
+        Args:
+            m:  A PyTorch tensor of shape (*, N_seq, N_res, c_m) that contains
+                the MSA representation.
+
+        Returns:
+            Output PyTorch tensor with the shape of m
+        """
+
+        m = self.layer_norm(m)
+        a = self.linear_1(m)
+        m = self.linear_2(self.relu(a))
+        return m
