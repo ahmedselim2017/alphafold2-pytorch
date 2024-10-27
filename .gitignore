@@ -162,3 +162,4 @@ cython_debug/
 #.idea/
 
 tests/testdata
+tests/control_values
