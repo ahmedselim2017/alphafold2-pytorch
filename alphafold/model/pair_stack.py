@@ -1,4 +1,5 @@
 from alphafold.model.multi_head_attention import MultiHeadAttention
+from alphafold.model.dropout import DropoutRowwise, DropoutColumnwise
 import torch
 
 
@@ -136,7 +137,7 @@ class PairTransition(torch.nn.Module):
 
     def __init__(self, c_z: int, n: int = 4):
         """
-        Initializes  PairTransition.
+        Initializes PairTransition.
 
         Args:
             c_z:    Embedding dimensions of the pair representation.
@@ -159,7 +160,7 @@ class PairTransition(torch.nn.Module):
 
         Args:
             z:  A PyTorch tensor of shape (*, N_res, N_res, c_m) that contains
-                the MSA representation.
+                the pairwise representation.
 
         Returns:
             Output PyTorch tensor with the shape of z
@@ -168,5 +169,52 @@ class PairTransition(torch.nn.Module):
         z = self.layer_norm(z)
         a = self.linear_1(z)
         z = self.linear_2(self.relu(a))
+
+        return z
+
+
+class PairStack(torch.nn.Module):
+    """
+    Implementation of the PairStack from the Algorithm 6.
+    """
+
+    def __init__(self, c_z: int):
+        """
+        Initializes the PairStack.
+
+        Args:
+            c_z:    Embedding dimensions of the pair representation.
+        """
+
+        super().__init__()
+
+        self.dropout_rowwise = DropoutRowwise(p=0.25)
+        self.dropout_columnwise = DropoutColumnwise(p=0.25)
+
+        self.tri_mul_out = TriangleMultiplication(c_z, mult_type="outgoing")
+        self.tri_mul_in = TriangleMultiplication(c_z, mult_type="incoming")
+
+        self.tri_att_start = TriangleAttention(c_z, node_type="starting_node")
+        self.tri_att_end = TriangleAttention(c_z, node_type="ending_node")
+
+        self.pair_transition = PairTransition(c_z)
+
+    def forward(self, z: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the PairStack module.
+
+        Args:
+            z:  A PyTorch tensor of shape (*, N_res, N_res, c_m) that contains
+                the pairwise representation.
+
+        Returns
+            Output PyTorch tensor with the shape of z
+        """
+
+        z += self.dropout_rowwise(self.tri_mul_out(z))
+        z += self.dropout_rowwise(self.tri_mul_in(z))
+        z += self.dropout_rowwise(self.tri_att_start(z))
+        z += self.dropout_columnwise(self.tri_att_end(z))
+        z += self.pair_transition(z)
 
         return z

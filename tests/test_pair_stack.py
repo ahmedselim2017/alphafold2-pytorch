@@ -1,7 +1,7 @@
 control_folder = "./control_values/evoformer"
 
 
-def test_trianglemultiplication():
+def test_TriangleMultiplication():
     from alphafold.model.pair_stack import TriangleMultiplication
 
     from tests.control_values.evoformer.evoformer_checks import c_z, c
@@ -43,3 +43,16 @@ def test_PairTransition():
     test_module_shape(pair_trans, 'pair_transition', control_folder)
 
     test_module(pair_trans, 'pair_transition', 'z', 'z_out', control_folder)
+
+
+def test_PairStack():
+
+    from alphafold.model.pair_stack import PairStack
+    from tests.control_values.evoformer.evoformer_checks import c_z
+    from tests.control_values.evoformer.evoformer_checks import test_module_shape, test_module
+
+    pair_stack = PairStack(c_z)
+
+    test_module_shape(pair_stack, 'pair_stack', control_folder)
+
+    test_module(pair_stack, 'pair_stack', 'z', 'z_out', control_folder)
