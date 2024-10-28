@@ -54,7 +54,7 @@ class MSAColumnAttention(torch.nn.Module):
     Implementation of the Algorithm 8.
     """
 
-    def __init__(self, c_m: int, c: int, N_head: int = 8):
+    def __init__(self, c_m: int, c: int = 32, N_head: int = 8):
         """
         Initializes MSAColumnAttention.
 
