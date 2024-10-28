@@ -34,7 +34,7 @@ class InputEmbedder(torch.nn.Module):
         self.linear_msa_m = torch.nn.Linear(msa_feat_dim, c_m)
         self.linear_relpos = torch.nn.Linear(2 * vbins + 1, c_z)
 
-    def relpos(self, residue_index: torch.Tensor):
+    def relpos(self, residue_index: torch.Tensor) -> torch.Tensor:
         """
         Implementation of the Algorithm 4.
 
@@ -60,3 +60,33 @@ class InputEmbedder(torch.nn.Module):
                                                1).to(dtype=dtype)
 
         return self.linear_relpos(d_onehot)
+
+    def forward(self, batch: dict):
+        """
+        Forward pass for the Algorithm 3.
+
+        Args:
+            batch:  A dictionary of features that includes:
+                * msa_feat: Initial MSA feature with the shape of
+                            (*, N_seq, N_res, msa_feat_dim).
+                * target_feat:  Target feature with the shape of
+                                (*, N_res, tf_dim).
+                * residue_index:    Residue index with the shape of (*, N_res).
+
+        Returns:
+            PyTorch tensor m which represents the MSA features and z which
+            represents the pairwise features.
+        """
+
+        a = self.linear_tf_z_i(batch["target_feat"])
+        b = self.linear_tf_z_j(batch["target_feat"])
+
+        z = a.unsqueeze(-2) + b.unsqueeze(-3)
+
+        z = z + self.relpos(batch["residue_index"])
+
+        target_feat = batch["target_feat"].unsqueeze(-3)
+        m = self.linear_msa_m(
+            batch["msa_feat"]) + self.linear_tf_m(target_feat)
+
+        return m, z
