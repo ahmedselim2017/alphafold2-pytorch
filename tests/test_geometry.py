@@ -159,3 +159,53 @@ def test_warp3d_point():
     assert torch.allclose(x_warped_batch,
                           x_exp.broadcast_to(batch_shape + x_exp.shape),
                           atol=1e-5), "Error in batched use."
+
+
+def test_create_4x4_rotatiton():
+    from alphafold.utils.geometry import create_4x4_transform
+
+    ex = torch.tensor([1.2, 0.3, 0.5])
+    ey = torch.tensor([1.6, -2.2, 0.3])
+    t = torch.tensor([0.4, 0.2, 0.85])
+
+    T = create_4x4_transform(ex, ey, t)
+    T_batch = create_4x4_transform(ex.broadcast_to(2, 4, 3),
+                                   ey.broadcast_to(2, 4, 3),
+                                   t.broadcast_to(2, 4, 3))
+
+    T_exp = torch.load(f'{control_folder}/create_4x4_T.pt')
+
+    assert torch.allclose(T, T_exp, atol=1e-5)
+    assert torch.allclose(T_batch, T_exp.broadcast_to(2, 4, 4, 4), atol=1e-5)
+
+
+def test_invert_4x4_transform():
+    from alphafold.utils.geometry import invert_4x4_transform
+
+    T = torch.load(f'{control_folder}/create_4x4_T.pt')
+    T_batch = T.broadcast_to((5, 1, 4, 4))
+
+    T_inv = invert_4x4_transform(T)
+    T_inv_batch = invert_4x4_transform(T_batch)
+
+    T_inv_exp = torch.load(f'{control_folder}/invert_4x4_T.pt')
+
+    assert torch.allclose(T_inv, T_inv_exp, atol=1e-5)
+    assert torch.allclose(T_inv_batch,
+                          T_inv_exp.broadcast_to(5, 1, 4, 4),
+                          atol=1e-5)
+
+
+def test_makeRotX():
+    from alphafold.utils.geometry import makeRotX
+
+    phi = torch.tensor([math.cos(0.5), math.sin(0.5)])
+    phi_batch = phi.broadcast_to(5, 3, 2)
+
+    T = makeRotX(phi)
+    T_batch = makeRotX(phi_batch)
+
+    T_exp = torch.load(f'{control_folder}/makeRotX_T.pt')
+
+    assert torch.allclose(T, T_exp, atol=1e-5)
+    assert torch.allclose(T_batch, T_exp.broadcast_to(5, 3, 4, 4), atol=1e-5)

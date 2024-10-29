@@ -117,9 +117,9 @@ def quat_to_3x3_rotation(q: torch.Tensor) -> torch.Tensor:
     Args:
         q:  A PyTorch tensor with a shape of (*, 4) that includes the
             quaternion.
-    
+
     Returns:
-        A PyTorch tensor with a shape of (*, 3, 3). (?)
+        A PyTorch tensor with a shape of (*, 3, 3).
     """
 
     identity = torch.eye(3, dtype=q.dtype, device=q.device)
@@ -152,7 +152,7 @@ def assemble_4x4_transform(R: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
     return torch.cat((Rt, pad), dim=-2)
 
 
-def warp_3d_point(T: torch.Tensor, x: torch.Tensor):
+def warp_3d_point(T: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
     """
     Warps a 3D point through a homogenous 4x4 transform.
 
@@ -174,3 +174,74 @@ def warp_3d_point(T: torch.Tensor, x: torch.Tensor):
     x_warped = torch.einsum("...ij,...j->...i", T, x)
 
     return x_warped[..., :3]
+
+
+def create_4x4_transform(ex: torch.Tensor, ey: torch.Tensor,
+                         translation: torch.Tensor) -> torch.Tensor:
+    """
+    Creates a 4x4 transform by orthonormalizing the ex and ey vectors
+    using Gram-Schmidt orthonormalization and using the given translation.
+
+    Args:
+        ex: A PyTorch tensor with a shape of (*, 3).
+        ey: A PyTorch tensor with a shape of (*, 3).
+        translation:    A PyTorch tensor with a shape of (*, 3).
+
+    Returns:
+        A PyTorch tensor with a shape of (*, 4, 4).
+    """
+
+    R = create_3x3_rotation(ex, ey)
+    return assemble_4x4_transform(R, translation)
+
+
+def invert_4x4_transform(T: torch.Tensor) -> torch.Tensor:
+    """
+    Inverts a 4x4 transform.
+
+    The inverse of a transform (R,t) can be found as (R.T, -R.T @ t).
+
+    Args:
+        T:  A PyTorch tensor with a shape of (*, 4, 4).
+
+    Returns:
+        A PyTorch tensor with a shape of (*, 4, 4).
+    """
+
+    R = T[..., :3, :3]
+    t = T[..., :3, 3]
+
+    R_new = torch.transpose(R, -1, -2)
+    t_new = torch.einsum("...ij,...j->...i", -R_new, t)
+
+    return assemble_4x4_transform(R_new, t_new)
+
+
+def makeRotX(phi: torch.Tensor) -> torch.Tensor:
+    """
+    Creates a 4x4 transform for rotation of phi around the x axis where
+    phi is given by (cos(phi), sin(phi)).
+
+    Args:
+        phi:    A PyTorch tensor with a shape of (*, 2)
+
+    Returns:
+        A PyTorch tensor with a shape of (*, 4, 4).
+    """
+
+    phi_cos = phi[..., 0]
+    phi_sin = phi[..., 1]
+
+    R = torch.zeros(phi.shape[:-1] + (3, 3),
+                    device=phi.device,
+                    dtype=phi.dtype)
+
+    R[..., 0, 0] = 1
+    R[..., 1, 1] = phi_cos
+    R[..., 1, 2] = -phi_sin
+    R[..., 2, 1] = phi_sin
+    R[..., 2, 2] = phi_cos
+
+    t = torch.zeros(phi.shape[:-1] + (3, ), device=phi.device, dtype=phi.dtype)
+
+    return assemble_4x4_transform(R, t)
