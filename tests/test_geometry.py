@@ -92,3 +92,25 @@ def test_quat_vector_mul():
                           atol=1e-5), 'Error in quat_vector_mul, single use.'
     assert torch.allclose(qv_batch, qv_batch_exp,
                           atol=1e-5), 'Error in quat_vector_mul, batched use.'
+
+
+def test_quat_to_3x3_rotation():
+    from alphafold.utils.geometry import quat_to_3x3_rotation
+
+    quat = torch.tensor([0.9830, 0.1294, 0.1294, 0.0170])
+
+    R = quat_to_3x3_rotation(quat)
+
+    a, b, c, d = torch.unbind(quat, dim=-1)
+
+    exp_R = [[
+        a**2 + b**2 - c**2 - d**2, 2 * b * c - 2 * a * d, 2 * b * d + 2 * a * c
+    ], [
+        2 * b * c + 2 * a * d, a**2 - b**2 + c**2 - d**2, 2 * c * d - 2 * a * b
+    ], [
+        2 * b * d - 2 * a * c, 2 * c * d + 2 * a * b, a**2 - b**2 - c**2 + d**2
+    ]]
+    exp_R = [torch.stack(vals, dim=-1) for vals in exp_R]
+    exp_R = torch.stack(exp_R, dim=-2)
+
+    assert torch.allclose(R, exp_R, atol=1e-5)

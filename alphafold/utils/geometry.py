@@ -108,3 +108,25 @@ def quat_vector_mul(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     padded_v = torch.cat((v_pad, v), dim=-1)
 
     return quat_mul(q, quat_mul(padded_v, conjugate_quat(q)))[..., 1:]
+
+
+def quat_to_3x3_rotation(q: torch.Tensor) -> torch.Tensor:
+    """
+    Converts a quaternion to a 3x3 rotation matrix.
+
+    Args:
+        q:  A PyTorch tensor with a shape of (*, 4) that includes the
+            quaternion.
+    
+    Returns:
+        A PyTorch tensor with a shape of (*, 3, 3). (?)
+    """
+
+    identity = torch.eye(3, dtype=q.dtype, device=q.device)
+    identity = identity.broadcast_to(q.shape[:-1] + (3, 3))
+
+    v1 = quat_vector_mul(q, identity[..., 0])
+    v2 = quat_vector_mul(q, identity[..., 1])
+    v3 = quat_vector_mul(q, identity[..., 2])
+
+    return torch.stack((v1, v2, v3), dim=-1)
