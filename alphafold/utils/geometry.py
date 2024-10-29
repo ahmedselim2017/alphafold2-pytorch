@@ -250,7 +250,7 @@ def makeRotX(phi: torch.Tensor) -> torch.Tensor:
     return assemble_4x4_transform(R, t)
 
 
-def calculate_non_chi_transforms():
+def calculate_non_chi_transforms() -> torch.Tensor:
     """
     Calculates transforms for the local backbone frames:
 
@@ -290,7 +290,7 @@ def calculate_non_chi_transforms():
                        dim=1)
 
 
-def calculate_chi_transforms():
+def calculate_chi_transforms() -> torch.Tensor:
     """
     Calculates transforms for the side-chain frames:
 
@@ -329,18 +329,18 @@ def calculate_chi_transforms():
             atom = chi_angles_chain[res][j]
 
             if j == 0:
-                ex = atom_pos[atom] - atom_pos["CA"]
-                ey = atom_pos["N"] - atom_pos["CA"]
+                ex = atom_pos[atom] - atom_pos["CA"]  # type: ignore
+                ey = atom_pos["N"] - atom_pos["CA"]  # type: ignore
             else:
                 ex = atom_pos[atom]
                 ey = torch.tensor([-1., 0., 0.])
 
-            transforms[i, j,
-                       ...] = create_4x4_transform(ex, ey, atom_pos[atom])
+            transforms[i, j, ...] = create_4x4_transform(
+                ex, ey, atom_pos[atom])  # type: ignore
     return transforms
 
 
-def precalculate_rigid_transforms():
+def precalculate_rigid_transforms() -> torch.Tensor:
     """
     Calculates the non-chi and chi transforms.
 
@@ -350,3 +350,49 @@ def precalculate_rigid_transforms():
 
     return torch.cat(
         (calculate_non_chi_transforms(), calculate_chi_transforms()), dim=1)
+
+
+def compute_global_transforms(T: torch.Tensor, alpha: torch.Tensor,
+                              F: torch.Tensor) -> torch.Tensor:
+    """
+    Calculates the global frames for each aminoacid  by applying the global
+    transform T and rotation transforms in between the side chain frames.
+
+    Implementation of first 10 lines of the Alogrithm 24.
+
+    Args:
+        T:  A PyTorch tensor with a shape of (N_res, 4, 4) that contains the
+            global backbone transform for each aminoacid.
+        alpha:  A PyTorch tensor with a shape of (N_res, 7, 2) that contains
+                the cosine and sine values of the angles omega, phi, psi, chi1,
+                chi2, chi3, and chi4 in order.
+        F:  A PyTorch tensor with a shape of (N_res,) that contains the labels
+            for aminoacids encoded as indices.
+
+    Returns:
+        A PyTorch tensor with a shape of (N_res, 8, 4, 4) that includes the
+        global frames for each aminoacid.
+    """
+
+    alpha = alpha / torch.linalg.norm(alpha, dim=-1, keepdim=True)
+
+    omega, phi, psi, chi1, chi2, chi3, chi4 = torch.unbind(alpha, 1)
+
+    all_rigid_transforms = precalculate_rigid_transforms().to(device=T.device,
+                                                              dtype=T.dtype)
+    local_transforms = all_rigid_transforms[F]
+
+    global_transforms = torch.zeros_like(local_transforms,
+                                         device=T.device,
+                                         dtype=T.dtype)
+    global_transforms[:, 0, ...] = T
+
+    for i, angle in enumerate([omega, phi, psi, chi1]):
+        global_transforms[:, i + 1,
+                          ...] = T @ local_transforms[:, i + 1,
+                                                      ...] @ makeRotX(angle)
+    for i, angle in enumerate([chi2, chi3, chi4]):
+        j = i + 5
+        global_transforms[:, j, ...] = \
+                global_transforms[:, j - 1,...] @ local_transforms[:,j,...] @ makeRotX(angle)
+    return global_transforms

@@ -233,3 +233,19 @@ def test_precalculate_rigid_transforms():
 
     assert torch.allclose(chi_transforms, chi_transforms_exp, atol=1e-5)
     assert torch.allclose(all_transforms, all_transforms_exp, atol=1e-5)
+
+
+def test_compute_global_transforms():
+    from alphafold.utils.geometry import compute_global_transforms
+
+    N_res = 5
+    T = torch.linspace(-4, 4, N_res * 4 * 4).reshape(N_res, 4, 4)
+    alpha = torch.linspace(-3, 3, N_res * 7 * 2).reshape(N_res, 7, 2)
+    F = torch.tensor([4, 0, 18, 2, 0], dtype=torch.int64)
+
+    global_transforms = compute_global_transforms(T, alpha, F)
+
+    global_transforms_exp = torch.load(
+        f'{control_folder}/global_transforms.pt')
+
+    assert torch.allclose(global_transforms, global_transforms_exp, atol=1e-5)
