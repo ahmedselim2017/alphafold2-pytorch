@@ -150,3 +150,27 @@ def assemble_4x4_transform(R: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
     pad[..., -1] = 1
 
     return torch.cat((Rt, pad), dim=-2)
+
+
+def warp_3d_point(T: torch.Tensor, x: torch.Tensor):
+    """
+    Warps a 3D point through a homogenous 4x4 transform.
+
+    Promotes the given point x to 4D by making it 1x4, applies the given 4x4
+    transformation T to it, then converts the point to 3D.
+
+    Args:
+        T:  A PyTorch tensor with a shape of (*, 4, 4).
+        x:  A PyTorch tensor with a ashape of (*, 3).
+
+    Returns:
+        A PyTorch tensor with a shape of (*, 3)
+    """
+
+    pad = torch.ones(x.shape[:-1] + (1, ), device=x.device, dtype=x.dtype)
+
+    x = torch.cat((x, pad), dim=-1)
+
+    x_warped = torch.einsum("...ij,...j->...i", T, x)
+
+    return x_warped[..., :3]

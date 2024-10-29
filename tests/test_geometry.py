@@ -135,3 +135,27 @@ def test_assemble_4x4_transform():
     assert torch.allclose(T, T_exp, atol=1e-5), 'Error in single use.'
     assert torch.allclose(T_batch, T_batch_exp,
                           atol=1e-5), 'Error in batched use.'
+
+
+def test_warp3d_point():
+    from alphafold.utils.geometry import warp_3d_point, assemble_4x4_transform
+    R = torch.tensor([[0.7071, -0.7071, 0.0000], [0.7071, 0.7071, -0.0000],
+                      [0.0000, 0.0000, 1.0000]])
+
+    t = torch.tensor([2.0, 1.0, -1.0])
+    T = assemble_4x4_transform(R, t)
+    x = torch.tensor([-1.0, 0.0, 3.0])
+
+    batch_shape = (2, 1)
+    T_batch = T.broadcast_to(batch_shape + T.shape)
+    x_batch = x.broadcast_to(batch_shape + x.shape)
+
+    x_warped = warp_3d_point(T, x)
+    x_warped_batch = warp_3d_point(T_batch, x_batch)
+
+    x_exp = torch.load(f'{control_folder}/warp_3d_point.pt')
+
+    assert torch.allclose(x_exp, x_warped, atol=1e-5), "Error in single use."
+    assert torch.allclose(x_warped_batch,
+                          x_exp.broadcast_to(batch_shape + x_exp.shape),
+                          atol=1e-5), "Error in batched use."
