@@ -1,6 +1,4 @@
-from alphafold.utils.residue_constants import (rigid_group_atom_position_map,
-                                               chi_angles_mask,
-                                               chi_angles_chain)
+import alphafold.utils.residue_constants as constants
 import torch
 
 
@@ -278,7 +276,8 @@ def calculate_non_chi_transforms() -> torch.Tensor:
     psi_group = torch.zeros((20, 4, 4))
 
     phi_ey = torch.tensor([1., 0., 0.])
-    for i, atom_pos in enumerate(rigid_group_atom_position_map.values()):
+    for i, atom_pos in enumerate(
+            constants.rigid_group_atom_position_map.values()):
         phi_ex = atom_pos["N"] - atom_pos["CA"]
         phi_group[i, ...] = create_4x4_transform(phi_ex, phi_ey, atom_pos["N"])
 
@@ -320,13 +319,14 @@ def calculate_chi_transforms() -> torch.Tensor:
 
     transforms = torch.zeros((20, 4, 4, 4))
 
-    for i, (res, atom_pos) in enumerate(rigid_group_atom_position_map.items()):
+    for i, (res, atom_pos) in enumerate(
+            constants.rigid_group_atom_position_map.items()):
         for j in range(4):
-            if not chi_angles_mask[i][j]:
+            if not constants.chi_angles_mask[i][j]:
                 transforms[i, j, ...] = torch.eye(4)
                 continue
 
-            atom = chi_angles_chain[res][j]
+            atom = constants.chi_angles_chain[res][j]
 
             if j == 0:
                 ex = atom_pos[atom] - atom_pos["CA"]  # type: ignore
@@ -396,3 +396,69 @@ def compute_global_transforms(T: torch.Tensor, alpha: torch.Tensor,
         global_transforms[:, j, ...] = \
                 global_transforms[:, j - 1,...] @ local_transforms[:,j,...] @ makeRotX(angle)
     return global_transforms
+
+
+def compute_all_atom_coordinates(
+        T: torch.Tensor, alpha: torch.Tensor,
+        F: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Implementation of the Algorithm 24.
+
+    Args:
+        T:  A PyTorch tensor with a shape of (N_res, 4, 4) that contains the
+            global backbone transform for each aminoacid.
+        alpha:  A PyTorch tensor with a shape of (N_res, 7, 2) that contains
+                the cosine and sine values of the angles omega, phi, psi, chi1,
+                chi2, chi3, and chi4 in order.
+        F:  A PyTorch tensor with a shape of (N_res,) that contains the labels
+            for aminoacids encoded as indices.
+
+    Returns:
+        A PyTorch tensor with a shape (N_res, 37, 3) that includes the global
+        positions of each atom in each aminoacid and a PyTorch tensor with a
+        shape of (N_res, 37) that includes the atom mask.
+    """
+
+    device = T.device
+    dtype = T.dtype
+
+    global_transforms = compute_global_transforms(T, alpha, F)
+    global_transforms = global_transforms.to(device=T.device, dtype=T.dtype)
+
+    # (20, 37, 3)
+    atom_local_positions = constants.atom_local_positions
+    atom_local_positions = atom_local_positions.to(device=device, dtype=dtype)
+    atom_local_positions = atom_local_positions[F]
+
+    local_pos_pad = torch.ones(atom_local_positions.shape[:-1] + (1, ),
+                               device=device,
+                               dtype=dtype)
+    # (20, 37, 4)
+    padded_local_positions = torch.cat((atom_local_positions, local_pos_pad),
+                                       dim=-1)
+
+    # (20, 37)
+    atom_frame_inds = constants.atom_frame_inds.to(device=device)
+    atom_frame_inds = atom_frame_inds[F]
+
+    diff_dim = global_transforms.ndim - atom_frame_inds.ndim
+
+    atom_frame_inds = atom_frame_inds.reshape(atom_frame_inds.shape +
+                                              (1, ) * diff_dim)
+
+    atom_frame_inds = atom_frame_inds.broadcast_to(
+        atom_frame_inds.shape[:-diff_dim] +
+        global_transforms.shape[-diff_dim:])
+
+    # (N_res, 8, 4, 4) -> (N_res, 37, 4, 4)
+    atom_frames = torch.gather(global_transforms,
+                               dim=-3,
+                               index=atom_frame_inds)
+
+    global_positions = torch.einsum("...ijk,...ik->...ij", atom_frames,
+                                    padded_local_positions)
+    global_positions = global_positions[..., :3]
+
+    atom_mask = constants.atom_mask.to(device=device)[F]
+
+    return global_positions, atom_mask

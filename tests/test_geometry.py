@@ -249,3 +249,21 @@ def test_compute_global_transforms():
         f'{control_folder}/global_transforms.pt')
 
     assert torch.allclose(global_transforms, global_transforms_exp, atol=1e-5)
+
+
+def test_compute_all_atom_coordinates():
+    from alphafold.utils.geometry import compute_all_atom_coordinates
+
+    N_res = 5
+    T = torch.linspace(-4, 4, N_res * 4 * 4).reshape(N_res, 4, 4)
+    alpha = torch.linspace(-3, 3, N_res * 7 * 2).reshape(N_res, 7, 2)
+    F = torch.tensor([4, 0, 18, 2, 0], dtype=torch.int64)
+
+    atom_positions, atom_mask = compute_all_atom_coordinates(T, alpha, F)
+
+    atom_positions_exp = torch.load(
+        f'{control_folder}/global_atom_positions.pt')
+    atom_mask_exp = torch.load(f'{control_folder}/global_atom_mask.pt')
+
+    assert torch.allclose(atom_positions, atom_positions_exp, atol=1e-5)
+    assert torch.allclose(atom_mask, atom_mask_exp, atol=1e-5)
