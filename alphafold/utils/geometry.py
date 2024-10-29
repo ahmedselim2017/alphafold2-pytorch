@@ -50,7 +50,8 @@ def quat_mul(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
         q2: A PyTorch tensor with a shape of (*,4) that includes the second
             quaternion
     Returns:
-        A PyTorch tensor of shape (*,4) that is the multiplication of q1 and q2
+        A PyTorch tensor with a shape of (*,4) that is the multiplication of q1
+        and q2
     """
 
     # q3 = (c,u)
@@ -66,3 +67,44 @@ def quat_mul(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     u = a * w + b * v + torch.linalg.cross(v, w, dim=-1)
 
     return torch.cat((c, u), dim=-1)
+
+
+def conjugate_quat(q: torch.Tensor) -> torch.Tensor:
+    """
+    Calculates the conjugate of a quaternion.
+
+    Args:
+        q:  A PyTorch tensor with a shape of (*, 4) that includes the
+            quaternion
+
+    Returns:
+        A PyTorch tensor with a shape of (*, 4) that includes the conjugate
+        of the give quaternion.
+    """
+
+    a = q[..., 0:1]
+    v = q[..., 1:]
+
+    return torch.cat((a, -v), dim=-1)
+
+
+def quat_vector_mul(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+    """
+    Multiplies a vector v with a quaternion q as 'q * (0, v) * (~q)'.
+
+    Args:
+        q:  A PyTorch tensor with a shape of (*, 4) that includes the
+            quaternion.
+        v:  A PyTorch tensor with a shape of (*, 3) that includes the vector.
+
+    Returns:
+        A PyTorch tensor with a shape of (*, 3) that is the multiplication of
+        q and v.
+    """
+
+    v_pad = torch.zeros(q.shape[:-1] + (1, ), device=v.device, dtype=v.dtype)
+
+    # (*, 3) -> (* , 4)
+    padded_v = torch.cat((v_pad, v), dim=-1)
+
+    return quat_mul(q, quat_mul(padded_v, conjugate_quat(q)))[..., 1:]

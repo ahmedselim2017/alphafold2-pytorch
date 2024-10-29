@@ -57,3 +57,38 @@ def test_quat_mul():
                           atol=1e-5), 'Error in quat_mul, single use.'
     assert torch.allclose(pq_batch, pq_exp.broadcast_to((2, 5, 4)),
                           atol=1e-5), 'Error in quat_mul, batched use.'
+
+
+def test_quat_vector_mul():
+    from alphafold.utils.geometry import conjugate_quat, quat_vector_mul
+
+    q = torch.tensor([0.3, -0.4, 0.1, 0.8])
+    q = q / torch.linalg.vector_norm(q)
+    q_copy = q.clone()
+    v = torch.tensor([4.0, 1.0, 2.0])
+
+    q_conj = conjugate_quat(q)
+    q_conj_batch = conjugate_quat(q.broadcast_to((3, 4, 4)))
+
+    q_conj_exp = torch.load(f'{control_folder}/quat_conjugate_check.pt')
+    q_conj_batch_exp = q_conj_exp.broadcast_to(3, 4, 4)
+
+    assert torch.allclose(
+        q_copy, q, atol=1e-5
+    ), 'Conjugation is performed in-place (modifies q) but should be done out-of-place. Clone the quaternion before modification.'
+    assert torch.allclose(q_conj, q_conj_exp,
+                          atol=1e-5), 'Error in q_conj, single use.'
+    assert torch.allclose(q_conj_batch, q_conj_batch_exp,
+                          atol=1e-5), 'Error in q_conj, batched use.'
+
+    qv = quat_vector_mul(q, v)
+    qv_batch = quat_vector_mul(q.broadcast_to(3, 4, 4),
+                               v.broadcast_to(3, 4, 3))
+
+    qv_exp = torch.load(f'{control_folder}/quat_vector_check.pt')
+    qv_batch_exp = qv_exp.broadcast_to(3, 4, 3)
+
+    assert torch.allclose(qv, qv_exp,
+                          atol=1e-5), 'Error in quat_vector_mul, single use.'
+    assert torch.allclose(qv_batch, qv_batch_exp,
+                          atol=1e-5), 'Error in quat_vector_mul, batched use.'
