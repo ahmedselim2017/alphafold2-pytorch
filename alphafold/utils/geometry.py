@@ -130,3 +130,23 @@ def quat_to_3x3_rotation(q: torch.Tensor) -> torch.Tensor:
     v3 = quat_vector_mul(q, identity[..., 2])
 
     return torch.stack((v1, v2, v3), dim=-1)
+
+
+def assemble_4x4_transform(R: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+    """
+    Assembles a 3x3 rotation matrix R and a transformation t to a 4x4
+    homogenous matrix.
+
+    Args:
+        R:  A PyTorch tensor with a shape of (*, 3, 3).
+        t:  A PyTorch tensor with a shape of (*, 3).
+
+    Returns:
+        A PyTorch tensor with a shape of (*, 4, 4).
+    """
+
+    Rt = torch.cat((R, t.unsqueeze(-1)), dim=-1)
+    pad = torch.zeros(t.shape[:-1] + (1, 4), device=t.device, dtype=t.dtype)
+    pad[..., -1] = 1
+
+    return torch.cat((Rt, pad), dim=-2)

@@ -114,3 +114,24 @@ def test_quat_to_3x3_rotation():
     exp_R = torch.stack(exp_R, dim=-2)
 
     assert torch.allclose(R, exp_R, atol=1e-5)
+
+
+def test_assemble_4x4_transform():
+    from alphafold.utils.geometry import assemble_4x4_transform
+
+    R = torch.tensor([[0.7071, -0.7071, 0.0000], [0.7071, 0.7071, -0.0000],
+                      [0.0000, 0.0000, 1.0000]])
+    t = torch.tensor([2.0, 1.0, -1.0])
+
+    R_batch = R.broadcast_to((2, 1, 3, 3))
+    t_batch = t.broadcast_to((2, 1, 3))
+
+    T = assemble_4x4_transform(R, t)
+    T_batch = assemble_4x4_transform(R_batch, t_batch)
+
+    T_exp = torch.load(f'{control_folder}/assemble_4x4_check.pt')
+    T_batch_exp = T_exp.broadcast_to((2, 1, 4, 4))
+
+    assert torch.allclose(T, T_exp, atol=1e-5), 'Error in single use.'
+    assert torch.allclose(T_batch, T_batch_exp,
+                          atol=1e-5), 'Error in batched use.'
