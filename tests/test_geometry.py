@@ -209,3 +209,27 @@ def test_makeRotX():
 
     assert torch.allclose(T, T_exp, atol=1e-5)
     assert torch.allclose(T_batch, T_exp.broadcast_to(5, 3, 4, 4), atol=1e-5)
+
+
+def test_calculate_non_chi_transforms():
+    from alphafold.utils.geometry import calculate_non_chi_transforms
+
+    transforms = calculate_non_chi_transforms()
+
+    transforms_exp = torch.load(f'{control_folder}/non_chi_transforms.pt')
+
+    assert torch.allclose(transforms, transforms_exp, atol=1e-5)
+
+
+def test_precalculate_rigid_transforms():
+    from alphafold.utils.geometry import (precalculate_rigid_transforms,
+                                          calculate_chi_transforms)
+
+    chi_transforms = calculate_chi_transforms()
+    all_transforms = precalculate_rigid_transforms()
+
+    chi_transforms_exp = torch.load(f'{control_folder}/chi_transforms.pt')
+    all_transforms_exp = torch.load(f'{control_folder}/all_transforms.pt')
+
+    assert torch.allclose(chi_transforms, chi_transforms_exp, atol=1e-5)
+    assert torch.allclose(all_transforms, all_transforms_exp, atol=1e-5)

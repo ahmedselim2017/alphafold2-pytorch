@@ -1,3 +1,6 @@
+from alphafold.utils.residue_constants import (rigid_group_atom_position_map,
+                                               chi_angles_mask,
+                                               chi_angles_chain)
 import torch
 
 
@@ -245,3 +248,105 @@ def makeRotX(phi: torch.Tensor) -> torch.Tensor:
     t = torch.zeros(phi.shape[:-1] + (3, ), device=phi.device, dtype=phi.dtype)
 
     return assemble_4x4_transform(R, t)
+
+
+def calculate_non_chi_transforms():
+    """
+    Calculates transforms for the local backbone frames:
+
+    backbone_group: identity
+    pre_omega_group:    identity
+    phi_group:
+        ex: CA (0, 0, 0) -> N
+        ey: CA -> C
+            (0, 0, 0) -> (1, 0, 0) [when normalized]
+        t:  N
+    psi_group:
+        ex: CA -> C
+        ey: N -> CA
+        t:  C
+
+    Returns:
+        Stacked transforms with a shape of (20, 4, 4, 4) which include 4 4x4
+        transforms included in dimensions 2 and 3 for 20 amino acids.
+    """
+
+    backbone_group = torch.eye(4).broadcast_to((20, 4, 4))
+    pre_omega_group = torch.eye(4).broadcast_to((20, 4, 4))
+
+    phi_group = torch.zeros((20, 4, 4))
+    psi_group = torch.zeros((20, 4, 4))
+
+    phi_ey = torch.tensor([1., 0., 0.])
+    for i, atom_pos in enumerate(rigid_group_atom_position_map.values()):
+        phi_ex = atom_pos["N"] - atom_pos["CA"]
+        phi_group[i, ...] = create_4x4_transform(phi_ex, phi_ey, atom_pos["N"])
+
+        psi_ex = atom_pos["C"] - atom_pos["CA"]
+        psi_ey = atom_pos["CA"] - atom_pos["N"]
+        psi_group[i, ...] = create_4x4_transform(psi_ex, psi_ey, atom_pos["C"])
+
+    return torch.stack((backbone_group, pre_omega_group, phi_group, psi_group),
+                       dim=1)
+
+
+def calculate_chi_transforms():
+    """
+    Calculates transforms for the side-chain frames:
+
+    chi1:
+        ex: CA -> #SC0
+        ey: CA -> N
+        t:  #SC0
+    chi2:
+        ex: #SC0 -> #SC1
+        ey: #SC0 -> CA
+        t:  #SC1
+    chi3:
+        ex: #SC1 -> #SC2
+        ey: #SC1 -> #SC0
+        t: #SC2
+    chi4:
+        ex: #SC2 -> #SC3
+        ey: #SC2 -> #SC1
+        t: #SC3
+
+    If a chi angle is not preset, it is replaced with an identity transform.
+
+    Returns:
+        Stacked transforms with a shape of (20, 4, 4, 4) which include 4 4x4
+        transforms included in dimensions 2 and 3 for 20 amino acids.
+    """
+
+    transforms = torch.zeros((20, 4, 4, 4))
+
+    for i, (res, atom_pos) in enumerate(rigid_group_atom_position_map.items()):
+        for j in range(4):
+            if not chi_angles_mask[i][j]:
+                transforms[i, j, ...] = torch.eye(4)
+                continue
+
+            atom = chi_angles_chain[res][j]
+
+            if j == 0:
+                ex = atom_pos[atom] - atom_pos["CA"]
+                ey = atom_pos["N"] - atom_pos["CA"]
+            else:
+                ex = atom_pos[atom]
+                ey = torch.tensor([-1., 0., 0.])
+
+            transforms[i, j,
+                       ...] = create_4x4_transform(ex, ey, atom_pos[atom])
+    return transforms
+
+
+def precalculate_rigid_transforms():
+    """
+    Calculates the non-chi and chi transforms.
+
+    Returns:
+        A PyTorch tensor with a shape of (20, 8, 4, 4).
+    """
+
+    return torch.cat(
+        (calculate_non_chi_transforms(), calculate_chi_transforms()), dim=1)
