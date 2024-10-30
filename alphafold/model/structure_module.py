@@ -82,3 +82,39 @@ class BackboneUpdate(torch.nn.Module):
         t = outs[..., 3:]
 
         return assemble_4x4_transform(R, t)
+
+
+class AngleResNetLayer(torch.nn.Module):
+    """
+    Implementation of the angle ResNet layer which is used in the lines 12 and
+    13 in the Algorithm 20.
+    """
+
+    def __init__(self, c: int):
+        """
+        Initializes the AngleResNetLayer.
+
+        Args:
+            c:  Embedding dimension for the Angle ResNet.
+        """
+
+        super().__init__()
+
+        self.linear_1 = torch.nn.Linear(c, c)
+        self.linear_2 = torch.nn.Linear(c, c)
+        self.relu = torch.nn.ReLU()
+
+    def forward(self, a: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the AngleResNetLayer.
+
+        Args:
+            a: Embedding with a shape of (*, N_res, c).
+
+        Returns:
+            A PyTorch tensor with the same shape as a.
+        """
+
+        a = a + self.linear_2(self.relu(self.linear_1(self.relu(a))))
+
+        return a
