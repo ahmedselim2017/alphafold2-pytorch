@@ -1,13 +1,14 @@
 import math
 import torch
 
-testdata_dir = "tests/testdata/feature_extraction_control_values"
+control_folder = "./control_values/feature_extraction"
+control_folder = "./control_values/feature_extraction"
 
 
 def test_load_a3m():
     from alphafold.data.feature_extraction import load_a3m
 
-    seqs = load_a3m(f"{testdata_dir}/alignment_tautomerase.a3m")
+    seqs = load_a3m(f"{control_folder}/alignment_tautomerase.a3m")
 
     first_expected = [
         'PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK',
@@ -41,11 +42,11 @@ def test_onehot_encode_aa():
 def test_initial_data_from_seqs():
     from alphafold.data.feature_extraction import load_a3m, initial_data_from_seqs
 
-    seqs = load_a3m(f'{testdata_dir}/alignment_tautomerase.a3m')
+    seqs = load_a3m(f'{control_folder}/alignment_tautomerase.a3m')
 
     features = initial_data_from_seqs(seqs)
 
-    expected_features = torch.load(f'{testdata_dir}/initial_data.pt',
+    expected_features = torch.load(f'{control_folder}/initial_data.pt',
                                    weights_only=False)
 
     for key, param in features.items():
@@ -56,11 +57,11 @@ def test_initial_data_from_seqs():
 
 def test_select_cluster_centers():
     from alphafold.data.feature_extraction import select_cluster_centers
-    inp = torch.load(f'{testdata_dir}/initial_data.pt', weights_only=False)
+    inp = torch.load(f'{control_folder}/initial_data.pt', weights_only=False)
 
     features = select_cluster_centers(inp, seed=0)
 
-    expected_features = torch.load(f'{testdata_dir}/clusters_selected.pt',
+    expected_features = torch.load(f'{control_folder}/clusters_selected.pt',
                                    weights_only=False)
 
     for key, param in features.items():
@@ -71,12 +72,12 @@ def test_select_cluster_centers():
 
 def test_mask_cluster_centers():
     from alphafold.data.feature_extraction import mask_cluster_centers
-    inp = torch.load(f'{testdata_dir}/clusters_selected.pt',
+    inp = torch.load(f'{control_folder}/clusters_selected.pt',
                      weights_only=False)
 
     features = mask_cluster_centers(inp, seed=1)
 
-    expected_features = torch.load(f'{testdata_dir}/clusters_masked.pt',
+    expected_features = torch.load(f'{control_folder}/clusters_masked.pt',
                                    weights_only=False)
 
     for key, param in features.items():
@@ -87,11 +88,12 @@ def test_mask_cluster_centers():
 
 def test_cluster_assignment():
     from alphafold.data.feature_extraction import cluster_assignment
-    inp = torch.load(f'{testdata_dir}/clusters_masked.pt', weights_only=False)
+    inp = torch.load(f'{control_folder}/clusters_masked.pt',
+                     weights_only=False)
 
     features = cluster_assignment(inp)
 
-    expected_features = torch.load(f'{testdata_dir}/clusters_assigned.pt',
+    expected_features = torch.load(f'{control_folder}/clusters_assigned.pt',
                                    weights_only=False)
 
     for key, param in features.items():
@@ -125,9 +127,9 @@ def test_cluster_average():
     res1 = cluster_average(ft1, eft1, assignment, assignment_count)
     res2 = cluster_average(ft2, eft2, assignment, assignment_count)
 
-    expected_res1 = torch.load(f'{testdata_dir}/cluster_average_res1.pt',
+    expected_res1 = torch.load(f'{control_folder}/cluster_average_res1.pt',
                                weights_only=False)
-    expected_res2 = torch.load(f'{testdata_dir}/cluster_average_res2.pt',
+    expected_res2 = torch.load(f'{control_folder}/cluster_average_res2.pt',
                                weights_only=False)
 
     assert torch.allclose(res1, expected_res1)
@@ -136,12 +138,12 @@ def test_cluster_average():
 
 def test_summarize_clusters():
     from alphafold.data.feature_extraction import summarize_clusters
-    inp = torch.load(f'{testdata_dir}/clusters_assigned.pt',
+    inp = torch.load(f'{control_folder}/clusters_assigned.pt',
                      weights_only=False)
 
     features = summarize_clusters(inp)
 
-    expected_features = torch.load(f'{testdata_dir}/clusters_summarized.pt',
+    expected_features = torch.load(f'{control_folder}/clusters_summarized.pt',
                                    weights_only=False)
 
     for key, param in features.items():
@@ -152,12 +154,12 @@ def test_summarize_clusters():
 
 def test_crop_extra_msa():
     from alphafold.data.feature_extraction import crop_extra_msa
-    inp = torch.load(f'{testdata_dir}/clusters_summarized.pt',
+    inp = torch.load(f'{control_folder}/clusters_summarized.pt',
                      weights_only=False)
 
     features = crop_extra_msa(inp, seed=2)
 
-    expected_features = torch.load(f'{testdata_dir}/extra_msa_cropped.pt',
+    expected_features = torch.load(f'{control_folder}/extra_msa_cropped.pt',
                                    weights_only=False)
 
     for key, param in features.items():
@@ -168,12 +170,12 @@ def test_crop_extra_msa():
 
 def test_msa_feat():
     from alphafold.data.feature_extraction import calculate_msa_feat
-    inp = torch.load(f'{testdata_dir}/extra_msa_cropped.pt',
+    inp = torch.load(f'{control_folder}/extra_msa_cropped.pt',
                      weights_only=False)
 
     msa_feat = calculate_msa_feat(inp)
 
-    expected_feat = torch.load(f'{testdata_dir}/msa_feat.pt',
+    expected_feat = torch.load(f'{control_folder}/msa_feat.pt',
                                weights_only=False)
 
     print(msa_feat.shape)
@@ -183,12 +185,31 @@ def test_msa_feat():
 
 def test_calculate_extra_msa_feat():
     from alphafold.data.feature_extraction import calculate_extra_msa_feat
-    inp = torch.load(f'{testdata_dir}/extra_msa_cropped.pt',
+    inp = torch.load(f'{control_folder}/extra_msa_cropped.pt',
                      weights_only=False)
 
     msa_feat = calculate_extra_msa_feat(inp)
 
-    expected_feat = torch.load(f'{testdata_dir}/extra_msa_feat.pt',
+    expected_feat = torch.load(f'{control_folder}/extra_msa_feat.pt',
                                weights_only=False)
 
     assert torch.allclose(msa_feat, expected_feat)
+
+
+def test_create_fratures_from_a3m():
+    from alphafold.data.feature_extraction import create_features_from_a3m
+
+    inp = torch.load(f'{control_folder}/extra_msa_cropped.pt')
+
+    batch = create_features_from_a3m(
+        f'{control_folder}/alignment_tautomerase.a3m', seed=0)
+
+    expected_batch = torch.load(f'{control_folder}/full_batch.pt')
+
+    for key, param in batch.items():
+        assert torch.allclose(
+            param,
+            expected_batch[key]), f'Error in computation of feature {key}.'
+
+    assert batch[
+        'target_feat'].dtype == torch.float32, f"Target feat isn't a float, but {batch['target_feat'].dtype}."

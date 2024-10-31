@@ -470,3 +470,50 @@ def calculate_extra_msa_feat(
         dim=-1)
 
     return extra_msa_feat
+
+
+def create_features_from_a3m(filename: str, seed: int | None = None) -> dict:
+    """
+    Creates features from the given a3m file.
+
+    Args:
+        filename:   Path of the A3M MSA.
+
+    Returns:
+        A dictionary that contains:
+            * msa_feat: A PyTorch tensor that contains the final MSA features.
+            * extra_msa_feat:   A PyTorch tensor that contains the extra
+                                MSA features.
+            * target_feat:  A PyTorch tensor that contains the one-hot
+                            encodings of the target protein sequence.
+            * residue_index:    A PyTorch tensor that contains the residue
+                                indices (0, 1, 2,..., N-1).
+    """
+
+    out = {}
+    seed_select_clusters = None
+    seed_mask_clusters = None
+    seed_crop_extra = None
+
+    if seed is not None:
+        seed_select_clusters = seed
+        seed_mask_clusters = seed + 1
+        seed_crop_extra = seed + 2
+
+    seqs = load_a3m(filename)
+    initial_features = initial_data_from_seqs(seqs)
+
+    features = select_cluster_centers(initial_features,
+                                      seed=seed_select_clusters)
+    features = mask_cluster_centers(features, seed=seed_mask_clusters)
+    features = cluster_assignment(features)
+    features = summarize_clusters(features)
+    features = crop_extra_msa(features, seed=seed_crop_extra)
+
+    out["msa_feat"] = calculate_msa_feat(features)
+    out["extra_msa_feat"] = calculate_extra_msa_feat(features)
+
+    out["target_feat"] = onehot_encode_aa(seqs[0], use_gap_token=False).float()
+    out["residue_index"] = torch.arange(len(seqs[0]))
+
+    return out
