@@ -24,7 +24,7 @@ def test_BackboneUpdate():
     test_module_forward(bb_update, 'bb_update', 's', 'T_out', control_folder)
 
 
-def test_aAngleResNetLayer():
+def test_AngleResNetLayer():
     from alphafold.model.structure_module import AngleResNetLayer
 
     from tests.control_values.structure_module.structure_module_checks import test_module_forward, test_module_shape, c
@@ -35,3 +35,16 @@ def test_aAngleResNetLayer():
 
     test_module_forward(resnet_layer, 'resnet_layer', 'a', 'a_out',
                         control_folder)
+
+
+def test_AngleResNet():
+    from alphafold.model.structure_module import AngleResNet
+
+    from tests.control_values.structure_module.structure_module_checks import test_module_forward, test_module_shape, c_s, c
+
+    angle_resnet = AngleResNet(c_s, c)
+
+    test_module_shape(angle_resnet, 'angle_resnet', control_folder)
+
+    test_module_forward(angle_resnet, 'angle_resnet', ('s', 's_initial'),
+                        'alpha', control_folder)

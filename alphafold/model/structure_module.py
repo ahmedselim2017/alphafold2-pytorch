@@ -118,3 +118,65 @@ class AngleResNetLayer(torch.nn.Module):
         a = a + self.linear_2(self.relu(self.linear_1(self.relu(a))))
 
         return a
+
+
+class AngleResNet(torch.nn.Module):
+    """
+    Implementation of the angle ResNet from lines 11 to 14 in the Algorithm 20.
+    """
+
+    def __init__(self,
+                 c_s: int,
+                 c: int = 128,
+                 n_torsion_angles: int = 7,
+                 n_layer: int = 2):
+        """
+        Initializes the anlge ResNet.
+
+        Args:
+            c_s:    Dimension of the single representation.
+            c:  Embedding dimension for the AngleResNet.
+            N_layer:    Number of AngleResNetLayer that should be used.
+        """
+
+        super().__init__()
+
+        self.n_torsion_angles = n_torsion_angles
+
+        self.linear_in = torch.nn.Linear(c_s, c)
+        self.linear_initial = torch.nn.Linear(c_s, c)
+        self.layers = torch.nn.ModuleList(
+            [AngleResNetLayer(c) for _ in range(n_layer)])
+        # Twice the number of torsion angles as cosine and sine of the angles
+        # are being predicted
+        self.linear_out = torch.nn.Linear(c, 2 * n_torsion_angles)
+        self.relu = torch.nn.ReLU()
+
+    def forward(self, s: torch.Tensor, s_initial: torch.Tensor):
+        """
+        Forward pass for the angle ResNet.
+
+        Uses ReLU to the single and initial single representations while
+        generating the embedding contrary to the supplementary information
+        as the official implementation also uses ReLU.
+
+        Args:
+            s:  A PyTorch tensor with a shape of (*, N_res, c) that contains
+                the single representation
+            s_initial:  A PyTorch tensor with a shape of (*, N_res, c) that
+                        contains the initial single representation
+        
+        Returns:
+            A PyTorch tensor with a shape of (*, N_res, n_torsion_angles, 2)
+        """
+
+        a = self.linear_in(self.relu(s)) + self.linear_initial(
+            self.relu(s_initial))
+        for layer in self.layers:
+            a = layer(a)
+
+        alpha = self.linear_out(self.relu(a))
+        alpha_shape = alpha.shape[:-1] + (self.n_torsion_angles, 2)
+        alpha = alpha.view(alpha_shape)
+
+        return alpha
