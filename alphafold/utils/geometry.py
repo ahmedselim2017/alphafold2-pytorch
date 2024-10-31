@@ -376,7 +376,7 @@ def compute_global_transforms(T: torch.Tensor, alpha: torch.Tensor,
 
     alpha = alpha / torch.linalg.norm(alpha, dim=-1, keepdim=True)
 
-    omega, phi, psi, chi1, chi2, chi3, chi4 = torch.unbind(alpha, 1)
+    omega, phi, psi, chi1, chi2, chi3, chi4 = torch.unbind(alpha, -2)
 
     all_rigid_transforms = precalculate_rigid_transforms().to(device=T.device,
                                                               dtype=T.dtype)
@@ -385,16 +385,15 @@ def compute_global_transforms(T: torch.Tensor, alpha: torch.Tensor,
     global_transforms = torch.zeros_like(local_transforms,
                                          device=T.device,
                                          dtype=T.dtype)
-    global_transforms[:, 0, ...] = T
+    global_transforms[..., 0, :, :] = T
 
     for i, angle in enumerate([omega, phi, psi, chi1]):
-        global_transforms[:, i + 1,
-                          ...] = T @ local_transforms[:, i + 1,
-                                                      ...] @ makeRotX(angle)
+        global_transforms[..., i +1, :, :] = \
+                T @ local_transforms[..., i + 1, :, :] @ makeRotX(angle)
     for i, angle in enumerate([chi2, chi3, chi4]):
         j = i + 5
-        global_transforms[:, j, ...] = \
-                global_transforms[:, j - 1,...] @ local_transforms[:,j,...] @ makeRotX(angle)
+        global_transforms[..., j, :, :] = \
+                global_transforms[..., j - 1,:,:] @ local_transforms[...,j,:,:] @ makeRotX(angle)
     return global_transforms
 
 
