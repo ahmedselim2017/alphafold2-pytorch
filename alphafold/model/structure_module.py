@@ -274,7 +274,7 @@ class StructureModule(torch.nn.Module):
                 * final_atom_positions: A PyTorch tensor with a shape of
                                         (*, N_res, 37, 3) which includes the
                                         final atom positions in Angstrom.
-                * positions_mask:   A PyTorch tensor with a shape of
+                * position_mask:    A PyTorch tensor with a shape of
                                     (*, N_res, 37) which includes the non
                                     included aminoacid for each residue.
                 * pseudo_beta_positions:    Positions of the pseudo beta

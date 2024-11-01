@@ -1,11 +1,11 @@
 control_folder = "./control_values/feature_embedder"
 
 
-def test_ExtraMSAEmbedder():
-    from alphafold.model.extra_msa_stack import ExtraMSAEmbedder
+def test_ExtraMsaEmbedder():
+    from alphafold.model.extra_msa_stack import ExtraMsaEmbedder
     from tests.control_values.feature_embedder.embedding_checks import test_module_shape, test_module_forward, f_e, c_e
 
-    extra_msa_embedder = ExtraMSAEmbedder(f_e, c_e)
+    extra_msa_embedder = ExtraMsaEmbedder(f_e, c_e)
 
     test_module_shape(extra_msa_embedder, 'extra_msa_embedder', control_folder)
 
@@ -26,11 +26,11 @@ def test_MSAColumnGlobalAttention():
                         control_folder)
 
 
-def test_ExtraMSABlock():
-    from alphafold.model.extra_msa_stack import ExtraMSABlock
+def test_ExtraMsaBlock():
+    from alphafold.model.extra_msa_stack import ExtraMsaBlock
     from tests.control_values.feature_embedder.embedding_checks import test_module_shape, test_module_forward, c_e, c_z
 
-    extra_msa_block = ExtraMSABlock(c_e, c_z)
+    extra_msa_block = ExtraMsaBlock(c_e, c_z)
 
     test_module_shape(extra_msa_block, 'extra_msa_block', control_folder)
 
@@ -38,12 +38,12 @@ def test_ExtraMSABlock():
                         'm_out', control_folder)
 
 
-def test_ExtraMSAStack():
-    from alphafold.model.extra_msa_stack import ExtraMSAStack
+def test_ExtraMsaStack():
+    from alphafold.model.extra_msa_stack import ExtraMsaStack
     from tests.control_values.feature_embedder.embedding_checks import test_module_shape, test_module_forward, c_e, c_z
 
     num_blocks = 3
-    extra_msa_stack = ExtraMSAStack(c_e, c_z, num_blocks)
+    extra_msa_stack = ExtraMsaStack(c_e, c_z, num_blocks)
 
     test_module_shape(extra_msa_stack, 'extra_msa_stack', control_folder)
 

@@ -6,14 +6,14 @@ import torch
 from alphafold.model.pair_stack import PairStack
 
 
-class ExtraMSAEmbedder(torch.nn.Module):
+class ExtraMsaEmbedder(torch.nn.Module):
     """
     Implementation of the extra MSA embedder.
     """
 
     def __init__(self, c_f: int, c_e: int):
         """
-        Initializes the ExtraMSAEmbedder.
+        Initializes the ExtraMsaEmbedder.
 
         Args:
             c_f:    Dimension of the extra_msa_feat.
@@ -26,7 +26,7 @@ class ExtraMSAEmbedder(torch.nn.Module):
 
     def forward(self, batch: dict) -> torch.Tensor:
         """
-        Forward pass for the ExtraMSAEmbedder.
+        Forward pass for the ExtraMsaEmbedder.
 
         Args:
             batch:  Feature dictionary with the following entries:
@@ -82,7 +82,7 @@ class MSAColumnGlobalAttention(torch.nn.Module):
         return m
 
 
-class ExtraMSABlock(torch.nn.Module):
+class ExtraMsaBlock(torch.nn.Module):
     """
     Implementation of one block from the Algorithm 18.
     """
@@ -133,25 +133,25 @@ class ExtraMSABlock(torch.nn.Module):
         return e, z
 
 
-class ExtraMSAStack(torch.nn.Module):
+class ExtraMsaStack(torch.nn.Module):
     """
     Implementation of the Algorithm 18.
     """
 
-    def __init__(self, c_e: int, c_z: int, N_block: int = 4):
+    def __init__(self, c_e: int, c_z: int, num_blocks: int = 4):
         """
         Initializes the extra MSA stack.
 
         Args:
             c_e:    Embedding dimension of the extra MSA representation.
             c_z:    Embedding dimension of the pairwise representation.
-            N_block:    Number of ExtraMSABlocks that should be used
+            N_block:    Number of ExtraMsaBlocks that should be used
         """
 
         super().__init__()
 
         self.blocks = torch.nn.ModuleList(
-            [ExtraMSABlock(c_e, c_z) for _ in range(N_block)])
+            [ExtraMsaBlock(c_e, c_z) for _ in range(num_blocks)])
 
     def forward(self, e: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
         """
